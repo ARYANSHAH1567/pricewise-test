@@ -20,6 +20,9 @@ export async function scrapeAmazonProduct(url: string) {
         port,
         rejectUnauthorized: false,
     }
+    function extractDescription($:any) {
+        return $('meta[name="description"]').attr('content');
+    }
 
     try {
         //Fetch the product page
@@ -48,6 +51,8 @@ export async function scrapeAmazonProduct(url: string) {
 
         const discountRate = $('.savingsPercentage').text().replace(/[-%]/g,"");
   
+       
+        
         const description = extractDescription($);
         //Construct data object with scrapped object
         //console.log({title,currentPrice,originalPrice,outOfStock,imageUrls,currency,discountRate});
