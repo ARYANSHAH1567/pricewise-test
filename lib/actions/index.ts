@@ -7,6 +7,16 @@ import { connectToDB } from "../mongoose";
 import { getAveragePrice, getHighestPrice, getLowestPrice } from "../utils";
 import { User } from "@/types";
 import { generateEmailBody, sendEmail } from "../nodemailer";
+import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect"
+
+export async function rethrowIfRedirectError(error: any) {
+  if (isRedirectError(error)) {
+    throw error
+  }
+}
+
+
 
 
 export async function scrapeAndStoreProduct(productUrl: string) {
@@ -112,10 +122,58 @@ export async function addUserEmailToProduct(productId: string, userEmail: string
             await sendEmail(emailContent, [userEmail]);
         }
 
-      
-
 
     } catch (error) {
         console.log(error);
     }
+}
+
+export async function removeUserEmailFromProduct(productId: string, userEmail: string) {
+    
+    try {
+        // Check if the product exists
+        const product = await Prodcut.findById(productId);
+
+        if (!product) {
+            console.log('Product not found');
+            return;
+        }
+
+        const userExists = product.users.some((user: { email: string; }) => user.email === userEmail);
+        if (userExists) {
+            // Remove the user from the product's users array
+            await Prodcut.findByIdAndUpdate(
+                productId,
+                { $pull: { users: { email: userEmail } } },
+                { new: true }
+            );
+
+            // Reload the product to get the updated users array
+            const updatedProduct = await Prodcut.findById(productId);
+            const size = updatedProduct.users.length;
+
+            // If no users left, delete the product and redirect
+            if (size === 0) {
+               
+                await Prodcut.findByIdAndDelete(productId);
+                // Ensure the redirect happens only when appropriate
+                redirect("/");
+               
+            } else {
+                console.log("Size of users array:", size);
+                // No need to redirect if the product still has users
+                return { user:1 };
+            }
+        } else {
+            console.log('User not found in product');
+            return { error: 'User not found' };
+        }
+    } catch (error) {
+        if (isRedirectError(error)) {
+            throw error;
+          }
+        console.error('Error removing user:', error);
+    }
+
+ 
 }

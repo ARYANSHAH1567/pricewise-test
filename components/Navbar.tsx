@@ -19,10 +19,20 @@ const Navbar = () => {
          </Link>
          <div className="flex items-center gap-5">
             {navIcons.map((icon)=>(
+              icon.alt==='search'?<a href="/"><img 
+              key={icon.alt}
+              src={icon.src}
+              alt={icon.alt}
+              
+              width={28}
+              height={28}
+              className="object-contain"
+              /></a>: 
                 <img 
                 key={icon.alt}
                 src={icon.src}
                 alt={icon.alt}
+                
                 width={28}
                 height={28}
                 className="object-contain"
