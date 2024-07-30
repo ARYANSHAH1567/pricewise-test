@@ -16,9 +16,6 @@ export async function rethrowIfRedirectError(error: any) {
   }
 }
 
-
-
-
 export async function scrapeAndStoreProduct(productUrl: string) {
     if (!productUrl) return;
 

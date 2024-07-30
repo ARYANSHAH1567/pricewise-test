@@ -31,15 +31,24 @@ export async function scrapeAmazonProduct(url: string) {
 
         //Extract the product title
         const title = $('#productTitle').text().trim();
-        const currentPrice = extractPrice($('.priceToPay span.a-price-whole'), $('a.size.base.a-color-price'), $('.a-button-selected .a-color-base'), $('.a-price.a-text-price'));
+        const currentPrice = extractPrice(
+            $('.priceToPay span.a-price-whole'),
+            $('.a-price .a-offscreen'), // Added a-offscreen class selector
+            $('a.size.base.a-color-price'),
+            $('.a-button-selected .a-color-base'),
+            $('.a-price.a-text-price')
+        );
 
         const originalPrice = extractPrice(
             $('#priceblock_ourprice'),
-            $('.a-price.a-text-price span.a-offscreen'),
+            $('.a-text-price .a-offscreen'), // Added a-offscreen class selector
             $('#listPrice'),
             $('#priceblock_dealprice'),
             $('.a-size-base.a-color-price')
-          );
+        );
+
+        console.log('Current Price:', currentPrice);
+        console.log('Original Price:', originalPrice);
 
         const outOfStock = $('.a-declarative span.a-size-medium.a-color-success' || '#availability span').text().trim().toLowerCase() === 'currently unavailable.'
 
@@ -74,6 +83,7 @@ export async function scrapeAmazonProduct(url: string) {
             highestPrice: Number(originalPrice) || Number(currentPrice),
             averagePrice: Number(currentPrice) || Number(originalPrice)
         }
+        console.log(data);
         return data;
 
     } catch (error: any) {

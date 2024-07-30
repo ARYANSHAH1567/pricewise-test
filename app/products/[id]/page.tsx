@@ -42,6 +42,8 @@ const ProductDeatils = async ({ params: { id } }: Props) => {
                 target="_blank"
                 className="text-base text-black opacity-50"
               >
+                {product.isOutOfStock?'Currently Out of Stock':'In Stock'}
+                <br/>
                 Visit Product
               </Link>
             </div>
