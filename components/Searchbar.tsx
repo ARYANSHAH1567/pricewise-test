@@ -43,7 +43,7 @@ const Searchbar = () => {
       // Scrape the product page
       const productId = await scrapeAndStoreProduct(searchPrompt);
       
-      const url = `${process.env.NEXT_PUBLIC_BASE_URL}/products/${productId}`;
+      const url = `https://pricewise-test.vercel.app/products/${productId}`;
       router.push(url); 
       // Optionally handle further actions after the product is scraped
       // e.g., show a success message or update UI
