@@ -20,11 +20,12 @@ export type PriceHistoryItem = {
     averagePrice: number;
     discountRate: number;
     description: string;
-    category: string;
     reviewsCount: number;
-    stars: number;
     isOutOfStock: Boolean;
-    users?: User[];
+    isTracked: Boolean;
+    isLiked: Boolean;
+    buyers: String;
+    users: User[];
   };
   
   export type NotificationType =

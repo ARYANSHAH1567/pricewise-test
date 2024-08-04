@@ -93,7 +93,7 @@ export async function generateEmailBody(
     }
 });
 
-  export async function sendEmail (emailContent: EmailContent, sendTo: string[]) {
+  export async function sendEmail (emailContent: EmailContent, sendTo: string) {
     const mailOptions = {
         from: 'PRICEWISE11@outlook.com',
         to: sendTo,
@@ -102,7 +102,6 @@ export async function generateEmailBody(
     }
 
     const data = await transporter.sendMail(mailOptions);
-    console.log(data);
 
     transporter.sendMail(mailOptions, (error:any, info:any)=>{
         if(error) return console.log(error);

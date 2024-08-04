@@ -1,17 +1,18 @@
-
 "use client"
 
 import { scrapeAndStoreProduct } from '@/lib/actions';
-import { FormEvent, useState } from 'react'
+import { useRouter } from 'next/navigation';
+import { NextResponse } from 'next/server';
+import { FormEvent, useState } from 'react';
 
 const isValidAmazonProductURL = (url: string) => {
   try {
     const parsedURL = new URL(url);
     const hostname = parsedURL.hostname;
 
-    if(
+    if (
       hostname.includes('amazon.com') || 
-      hostname.includes ('amazon.') || 
+      hostname.includes('amazon.') || 
       hostname.endsWith('amazon')
     ) {
       return true;
@@ -19,33 +20,42 @@ const isValidAmazonProductURL = (url: string) => {
   } catch (error) {
     return false;
   }
-
   return false;
-}
+};
 
 const Searchbar = () => {
   const [searchPrompt, setSearchPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSearchPrompt("");
+    setSearchPrompt('');
     const isValidLink = isValidAmazonProductURL(searchPrompt);
 
-    if(!isValidLink) return alert('Please provide a valid Amazon link')
+    if (!isValidLink) {
+      return alert('Please provide a valid Amazon link');
+    }
 
     try {
       setIsLoading(true);
+      
+      // Scrape the product page
+      const productId = await scrapeAndStoreProduct(searchPrompt);
+      
+      const url = `${process.env.NEXT_PUBLIC_BASE_URL}/products/${productId}`;
+      router.push(url); 
+      // Optionally handle further actions after the product is scraped
+      // e.g., show a success message or update UI
 
-     // Scrape the product page
-      const product = await scrapeAndStoreProduct(searchPrompt);
-      console.log(product);
     } catch (error) {
-      console.log(error);
-    } finally {
+      console.error('Error scraping or storing product:', error);
+      // Display an error message to the user
+      alert('Failed to process the product. Please try again.');
+    } finally { 
       setIsLoading(false);
     }
-  }
+  };
 
   return (
     <form 
@@ -59,7 +69,6 @@ const Searchbar = () => {
         placeholder="Enter product link"
         className="searchbar-input"
       />
-
       <button 
         type="submit" 
         className="searchbar-btn"
@@ -68,7 +77,7 @@ const Searchbar = () => {
         {isLoading ? 'Searching...' : 'Search'}
       </button>
     </form>
-  )
-}
+  );
+};
 
-export default Searchbar
+export default Searchbar;

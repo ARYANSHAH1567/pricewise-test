@@ -1,13 +1,31 @@
+'use client'
+import React from 'react';
+import { useSelector} from 'react-redux';
+import { RootState } from '@/store/store';
 import HeroCarousel from "@/components/HeroCarousel";
 import Searchbar from "@/components/Searchbar";
-import React from "react";
-import { getAllProducts } from "@/lib/actions";
-import ProductCard from "@/components/ProductCard";
-import { SignInButton, UserButton } from "@clerk/nextjs";
-import { Authenticated, Unauthenticated } from "convex/react";
+import TrackedProd from '@/components/TrackedProd';
+import useSetUserEmail from '@/hooks/useSetUserEmail';
+import Loading from '@/components/Loading';
 
-export default async function Home() {
-  const allProducts = await getAllProducts();
+
+export default function Home() {
+
+  useSetUserEmail();
+  const userEmail = useSelector((state: RootState) => state.user.userEmail);
+
+  // Render loading state while email is not set
+  if (!userEmail) {
+    return(
+      <>
+      <div className='flex justify-center items-center mt-40'>
+        <div>
+          <Loading/>
+        </div>
+      </div>
+      </>
+    ) 
+  }
 
   return (
     <>
@@ -38,17 +56,7 @@ export default async function Home() {
           <HeroCarousel />
         </div>
       </section>
-
-      <section className="trending-section">
-        <h2 className="section-text">Trending</h2>
-        <div className="flex flex-wrap gap-x-8 gap-y-16">
-          {allProducts?.map((product) => (
-            <div>
-              <ProductCard key={product._id} product={product} />
-            </div>
-          ))}
-        </div>
-      </section>
+      <TrackedProd userEmail={userEmail} />
     </>
   );
 }

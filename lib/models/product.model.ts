@@ -9,7 +9,7 @@ const productSchema = new mongoose.Schema({
     originalPrice: { type: Number, required: true },
     priceHistory: [
         {
-            prices: { type: Number, },
+            price: { type: Number, },
             date: {type: Date, default: Date.now}
         },
     ],
@@ -19,13 +19,19 @@ const productSchema = new mongoose.Schema({
     discountRate: {type:Number},
     description: {type:String},
     reviewsCount: {type:Number},
+    rating: { type: Number },
     isOutOfStock: {type:Boolean,default:false},
-    users: [
-           { email: {type:String,required:true}},
-    ],default:[],},
+    isTracked: {type:Boolean,default:false},
+    isLiked: {type:Boolean,default:false},
+    buyers: {type:String},
+    users: [{
+        email:{type:String}
+    }],
+    },
     {timestamps:true});
 
 
-    const Prodcut = mongoose.models.Product || mongoose.model('Product',productSchema);
+    const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 
-    export default Prodcut;
+
+    export default Product;

@@ -47,9 +47,6 @@ export async function scrapeAmazonProduct(url: string) {
             $('.a-size-base.a-color-price')
         );
 
-        console.log('Current Price:', currentPrice);
-        console.log('Original Price:', originalPrice);
-
         const outOfStock = $('.a-declarative span.a-size-medium.a-color-success' || '#availability span').text().trim().toLowerCase() === 'currently unavailable.'
 
         const images = $('#imgBlkFront').attr('data-a-dynamic-image') || $('#landingImage').attr('data-a-dynamic-image') || '{}';
@@ -59,12 +56,17 @@ export async function scrapeAmazonProduct(url: string) {
         const currency = extractCurrency($('.a-price-symbol'));
 
         const discountRate = $('.savingsPercentage').text().replace(/[-%]/g,"");
+        const starRatingText = $('i.a-icon.a-icon-star span.a-icon-alt').text().trim(); // Adjust the selector as needed
   
-       
+        // Use a regex to extract the number before "out of 5 stars"
+        const starRatingMatch = starRatingText.match(/(\d+(\.\d+)?)/);
+      
+        const starRating = starRatingMatch ? parseFloat(starRatingMatch[0]) : null; // Extract the rating and convert to float
+      
+        const boughtText = $('#social-proofing-faceout-title-tk_bought span').text().trim();
+
         
         const description = extractDescription($);
-        //Construct data object with scrapped object
-        //console.log({title,currentPrice,originalPrice,outOfStock,imageUrls,currency,discountRate});
         const data = {
             url,
             currency: currency || '$',
@@ -75,15 +77,17 @@ export async function scrapeAmazonProduct(url: string) {
             priceHistory: [],
             discountRate: Number(discountRate),
             category: 'category',
-            reviewsCount: 100,
-            stars:4.5,
+            reviewsCount: starRating || 5,
             isOutOfStock: outOfStock,
             description:description,
             lowestPrice: Number(currentPrice) || Number(originalPrice),
             highestPrice: Number(originalPrice) || Number(currentPrice),
-            averagePrice: Number(currentPrice) || Number(originalPrice)
+            averagePrice: Number(currentPrice) || Number(originalPrice),
+            isTracked: false,
+            isLiked: false,
+            buyers:boughtText,
+            users: []
         }
-        console.log(data);
         return data;
 
     } catch (error: any) {

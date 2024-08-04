@@ -61,7 +61,6 @@ export async function POST(req: Request) {
       email:email_addresses[0].email_address,
     }
 
-    console.log(user);
     const newUser = await createUser(user);
 
     if(newUser) {
@@ -75,8 +74,6 @@ export async function POST(req: Request) {
     return NextResponse.json({message:"New user created",user:newUser});
 
   }
-  console.log(`Webhook with and ID of ${id} and type of ${eventType}`)
-  console.log('Webhook body:', body)
 
   return new Response('', { status: 200 })
 }

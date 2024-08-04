@@ -1,83 +1,92 @@
 "use server"
 
-import { revalidatePath } from "next/cache";
-import Prodcut from "../models/product.model";
+import { NextResponse } from 'next/server'
+import Product from "../models/product.model";
 import { scrapeAmazonProduct } from "../scraper";
-import { connectToDB } from "../mongoose";
+import  connectToDB  from "../mongoose";
 import { getAveragePrice, getHighestPrice, getLowestPrice } from "../utils";
-import { User } from "@/types";
+import {  useUser } from "@clerk/nextjs";
 import { generateEmailBody, sendEmail } from "../nodemailer";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect"
+import { getAuth } from "@clerk/nextjs/server";
+import User from '../models/users.models';
+import { stringify } from 'querystring';
+
 
 export async function rethrowIfRedirectError(error: any) {
   if (isRedirectError(error)) {
     throw error
   }
 }
-
 export async function scrapeAndStoreProduct(productUrl: string) {
-    if (!productUrl) return;
+  if (!productUrl) return;
 
-    try {
-        connectToDB();
+  try {
+      connectToDB();
 
-        const scrappedProduct = await scrapeAmazonProduct(productUrl);
+      const scrappedProduct = await scrapeAmazonProduct(productUrl);
 
-        if (!scrappedProduct) return;
+      if (!scrappedProduct) return;
 
-        let product = scrappedProduct;
+      let product = scrappedProduct;
 
-        const existingProduct = await Prodcut.findOne({ url: scrappedProduct.url });
+      const existingProduct = await Product.findOne({ url: scrappedProduct.url });
 
-        if (existingProduct) {
-            const updatedPriceHistory: any = [
-                ...existingProduct.priceHistory, { price: scrappedProduct.currentPrice }
-            ]
+      if (existingProduct) {
+          const updatedPriceHistory: any = [
+              ...existingProduct.priceHistory, { price: scrappedProduct.currentPrice }
+          ]
 
 
-            product = {
-                ...scrappedProduct,
-                priceHistory: updatedPriceHistory,
-                lowestPrice: getLowestPrice(updatedPriceHistory),
-                highestPrice: getHighestPrice(updatedPriceHistory),
-                averagePrice: getAveragePrice(updatedPriceHistory),
+          product = {
+              ...scrappedProduct,
+              priceHistory: updatedPriceHistory,
+              lowestPrice: getLowestPrice(updatedPriceHistory),
+              highestPrice: getHighestPrice(updatedPriceHistory),
+              averagePrice: getAveragePrice(updatedPriceHistory),
 
-            }
-        };
+          }
+      };
 
-        const newProduct = await Prodcut.findOneAndUpdate(
-            { url: scrappedProduct.url },
-            product,
-            { upsert: true, new: true }
-        );
+      const newProduct = await Product.findOneAndUpdate(
+          { url: scrappedProduct.url },
+          product,
+          { upsert: true, new: true }
+      );
 
-        revalidatePath(`/products/${newProduct._id}`);
+      return newProduct._id.toString();
 
-    } catch (error: any) {
-        throw new Error(`Failed to create/update product: ${error.message}`)
-    }
+  } catch (error: any) {
+      throw new Error(`Failed to create/update product: ${error.message}`)
+  }
 }
 
-export async function getProduct(productId: any) {
-    try {
-        connectToDB();
 
-        const product = await Prodcut.findOne({ _id: productId });
 
-        if (!product) return null;
 
-        return product;
-    } catch (error: any) {
-        console.log(error);
-    }
+export async function getProduct(productId: string) {
+  try {
+    await connectToDB();
+
+    const product = await Product.findOne({ _id: productId }).lean();
+
+    if (!product) throw new Error('Product not found');
+
+    
+    return product;
+  } catch (error: any) {
+    console.error('Error fetching product:', error);
+    return null; // Return null or an appropriate fallback value
+  }
 }
+
 
 export async function getAllProducts() {
     try {
-        connectToDB();
+      await   connectToDB();
 
-        const products = await Prodcut.find();
+        const products = await Product.find();
         return products;
 
     } catch (error) {
@@ -87,13 +96,13 @@ export async function getAllProducts() {
 
 export async function getSimilarProducts(productId: string) {
     try {
-        connectToDB();
+        await connectToDB();
 
-        const currentProduct = await Prodcut.findById(productId);
+        const currentProduct = await Product.findById(productId);
         if (!currentProduct) return null;
 
 
-        const similarProducts = await Prodcut.find({ _id: { $ne: productId }, }).limit(3)
+        const similarProducts = await Product.find({ _id: { $ne: productId }, }).limit(3)
 
         return similarProducts;
     } catch (error) {
@@ -103,22 +112,25 @@ export async function getSimilarProducts(productId: string) {
 
 export async function addUserEmailToProduct(productId: string, userEmail: string) {
     try {
-        const product = await Prodcut.findById(productId);
+        const product = await Product.findByIdAndUpdate(
+            productId,
+            { 
+              isTracked: true,
+              $addToSet: { users: { email: userEmail } },
+            },
+            { new: true } 
+          );
 
-        if (!product) return;
+          if (!product) return;
 
-        const userExists = product.users.some((user: User) => user.email === userEmail);
+          const updatedUser = await User.findOneAndUpdate(
+            { email: userEmail }, // Find the user by email
+            { $push: { TrackedProd: productId } }, // Add productId to trackedProd array if it doesn't already exist
+            { new: true } // Return the updated document
+          );
 
-        if (!userExists) {
-            product.users.push({ email: userEmail });
-
-            await product.save();
-
-            const emailContent = await generateEmailBody(product, "WELCOME");
-
-            await sendEmail(emailContent, [userEmail]);
-        }
-
+          const emailContent = await generateEmailBody(product, "WELCOME");
+          await sendEmail(emailContent, userEmail);
 
     } catch (error) {
         console.log(error);
@@ -128,43 +140,33 @@ export async function addUserEmailToProduct(productId: string, userEmail: string
 export async function removeUserEmailFromProduct(productId: string, userEmail: string) {
     
     try {
-        // Check if the product exists
-        const product = await Prodcut.findById(productId);
+       const product = await Product.findByIdAndUpdate(
+            productId,
+            {
+               isTracked: false,
+               $pull: { users: { email: userEmail } },
+             },
+            { new: true } // This option returns the updated document
+          );
 
         if (!product) {
             console.log('Product not found');
             return;
         }
 
-        const userExists = product.users.some((user: { email: string; }) => user.email === userEmail);
-        if (userExists) {
-            // Remove the user from the product's users array
-            await Prodcut.findByIdAndUpdate(
-                productId,
-                { $pull: { users: { email: userEmail } } },
-                { new: true }
-            );
 
-            // Reload the product to get the updated users array
-            const updatedProduct = await Prodcut.findById(productId);
-            const size = updatedProduct.users.length;
+        const updatedUser = await User.findOneAndUpdate(
+            { email: userEmail },
+            {
+              $pull: { TrackedProd: { productId } }, // Remove productId from TrackedProd array
+              $addToSet: { PastProd: productId } // Add productId to PastProd array if it doesn't already exist
+            },
+            { new: true } // Return the updated document
+          );
+          
 
-            // If no users left, delete the product and redirect
-            if (size === 0) {
-               
-                await Prodcut.findByIdAndDelete(productId);
-                // Ensure the redirect happens only when appropriate
                 redirect("/");
                
-            } else {
-                console.log("Size of users array:", size);
-                // No need to redirect if the product still has users
-                return { user:1 };
-            }
-        } else {
-            console.log('User not found in product');
-            return { error: 'User not found' };
-        }
     } catch (error) {
         if (isRedirectError(error)) {
             throw error;
@@ -173,4 +175,67 @@ export async function removeUserEmailFromProduct(productId: string, userEmail: s
     }
 
  
+}
+
+export async function getTrackedProd(userEmail: string) {
+    if (!userEmail) return [];
+  
+    try {
+      const user = await User.findOne({ email: userEmail }).populate('TrackedProd');
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return user.TrackedProd || [];
+    } catch (error) {
+      console.error('Error fetching tracked products:', error);
+      throw error;
+    }
+  }
+  
+
+export async function addToLiked(productId: string, userEmail: string)
+{
+    try{
+        const product = await Product.findByIdAndUpdate(
+            productId,
+            { isLiked: true },
+            { new: true } // This option returns the updated document
+          );
+    
+          if (!product) return;
+    
+          const updatedUser = await User.findOneAndUpdate(
+            { email: userEmail }, // Find the user by email
+            { $push: { LikedProd: productId } }, // Add productId to trackedProd array if it doesn't already exist
+            { new: true } // Return the updated document
+          );
+
+
+
+    } catch(e)
+    {
+        console.log(e);
+    }    
+}
+
+export async function removeFromLiked(productId: string, userEmail: string)
+{
+    try{
+        const product = await Product.findByIdAndUpdate(
+            productId,
+            { isLiked: false },
+            { new: true } // This option returns the updated document
+          );
+    
+          if (!product) return;
+    
+          const updatedUser = await User.findOneAndUpdate(
+            { email: userEmail }, // Find the user by email
+            { $pull: { LikedProd: productId } }, // Add productId to trackedProd array if it doesn't already exist
+            { new: true } // Return the updated document
+          );
+    } catch(e)
+    {
+        console.log(e);
+    }    
 }
