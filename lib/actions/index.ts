@@ -138,43 +138,44 @@ export async function addUserEmailToProduct(productId: string, userEmail: string
 }
 
 export async function removeUserEmailFromProduct(productId: string, userEmail: string) {
-    
-    try {
-       const product = await Product.findByIdAndUpdate(
-            productId,
-            {
-               isTracked: false,
-               $pull: { users: { email: userEmail } },
-             },
-            { new: true } // This option returns the updated document
-          );
+  try {
+    const product = await Product.findByIdAndUpdate(
+      productId,
+      {
+        isTracked: false,
+        $pull: { users: { email: userEmail } },
+      },
+      { new: true } // This option returns the updated document
+    );
 
-        if (!product) {
-            console.log('Product not found');
-            return;
-        }
-
-
-        const updatedUser = await User.findOneAndUpdate(
-            { email: userEmail },
-            {
-              $pull: { TrackedProd: { productId } }, // Remove productId from TrackedProd array
-              $addToSet: { PastProd: productId } // Add productId to PastProd array if it doesn't already exist
-            },
-            { new: true } // Return the updated document
-          );
-          
-
-                redirect("/");
-               
-    } catch (error) {
-        if (isRedirectError(error)) {
-            throw error;
-          }
-        console.error('Error removing user:', error);
+    if (!product) {
+      console.log('Product not found');
+      return;
     }
 
- 
+    const updatedUser = await User.findOneAndUpdate(
+      { email: userEmail },
+      {
+        $pull: { TrackedProd: productId }, // Use mongoose.Types.ObjectId to ensure correct type
+        $addToSet: { PastProd: productId } // Add productId to PastProd array if it doesn't already exist
+      },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedUser) {
+      console.log('User not found or update failed');
+      return;
+    }
+
+    console.log('Product removed from TrackedProd and added to PastProd successfully',updatedUser);
+    redirect("/");
+    
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+    console.error('Error removing user:', error);
+  }
 }
 
 export async function getTrackedProd(userEmail: string) {
@@ -206,12 +207,9 @@ export async function addToLiked(productId: string, userEmail: string)
     
           const updatedUser = await User.findOneAndUpdate(
             { email: userEmail }, // Find the user by email
-            { $push: { LikedProd: productId } }, // Add productId to trackedProd array if it doesn't already exist
+            { $addToSet: { LikedProd: productId } }, // Add productId to trackedProd array if it doesn't already exist
             { new: true } // Return the updated document
           );
-
-
-
     } catch(e)
     {
         console.log(e);

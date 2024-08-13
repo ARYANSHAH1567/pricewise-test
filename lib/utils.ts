@@ -64,28 +64,28 @@ export function getHighestPrice(priceList: PriceHistoryItem[]) {
   let highestPrice = priceList[0];
 
   for (let i = 0; i < priceList.length; i++) {
-    if (priceList[i].price > highestPrice.price) {
+    if (priceList[i].orgprice > highestPrice.orgprice) {
       highestPrice = priceList[i];
     }
   }
 
-  return highestPrice.price;
+  return highestPrice.orgprice;
 }
 
 export function getLowestPrice(priceList: PriceHistoryItem[]) {
   let lowestPrice = priceList[0];
 
   for (let i = 0; i < priceList.length; i++) {
-    if (priceList[i].price < lowestPrice.price) {
+    if (priceList[i].curprice < lowestPrice.curprice) {
       lowestPrice = priceList[i];
     }
   }
 
-  return lowestPrice.price;
+  return lowestPrice.curprice;
 }
 
 export function getAveragePrice(priceList: PriceHistoryItem[]) {
-  const sumOfPrices = priceList.reduce((acc, curr) => acc + curr.price, 0);
+  const sumOfPrices = priceList.reduce((acc, curr) => acc + curr.curprice, 0);
   const averagePrice = sumOfPrices / priceList.length || 0;
 
   return averagePrice;

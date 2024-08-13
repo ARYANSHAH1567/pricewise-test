@@ -28,16 +28,22 @@ export async function GET() {
                         return null;
                     }
 
+                    const originalPrice = scrapedProduct.originalPrice;
+                    const currentPrice = scrapedProduct.currentPrice;
+
                     const updatedPriceHistory = [
                         ...currentProduct.priceHistory,
                         {
-                            price: scrapedProduct.currentPrice,
+                            curprice: scrapedProduct.currentPrice,
+                            orgprice: scrapedProduct.originalPrice,
                             date: new Date(), // Include the date for historical records
                         },
                     ];
 
                     const product = {
                         ...scrapedProduct,
+                        originalPrice: originalPrice, // Ensure the price is a number
+                        currentPrice: currentPrice,   // Ensure the price is a number
                         priceHistory: updatedPriceHistory,
                         lowestPrice: getLowestPrice(updatedPriceHistory),
                         highestPrice: getHighestPrice(updatedPriceHistory),
@@ -53,7 +59,10 @@ export async function GET() {
                         { new: true, upsert: true } // Upsert if not exists
                     );
 
-                    if (updatedProduct) {
+                    //console.log("updated",updatedProduct);
+                    if (updatedProduct && updatedProduct.users && updatedProduct.users.length > 0) {
+                        console.log("Users associated with the product:", updatedProduct.users); // Log user data
+
                         const emailNotifType = getEmailNotifType(scrapedProduct, currentProduct);
 
                         if (emailNotifType) {
@@ -63,8 +72,15 @@ export async function GET() {
                             };
                             const emailContent = await generateEmailBody(productInfo, emailNotifType);
                             const userEmails = updatedProduct.users.map((user: any) => user.email);
-                            await sendEmail(emailContent, userEmails);
+
+                            if (userEmails.length > 0) {
+                                await sendEmail(emailContent, userEmails);
+                            } else {
+                                console.log(`No recipients found for product: ${updatedProduct.url}`);
+                            }
                         }
+                    } else {
+                        console.log(`No users found for product: ${updatedProduct.url}`);
                     }
 
                     return updatedProduct;

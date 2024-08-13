@@ -1,5 +1,6 @@
 export type PriceHistoryItem = {
-    price: number;
+    curprice: number;
+    orgprice:number;
   };
   
   export type User = {

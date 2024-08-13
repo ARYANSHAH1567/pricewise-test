@@ -68,7 +68,7 @@ const TrackedProd: React.FC = () => {
         {products.length > 0 ? (
           products.map((product: any) => (
             <div key={product._id}>
-              {product.isTracked && <ProductCard product={product} />}
+              <ProductCard product={product} />
             </div>
           ))
         ) : (

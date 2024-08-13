@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ products: user.LikedProd }, { status: 200 });
+    return NextResponse.json({ products: user.PastProd }, { status: 200 });
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json({ message: 'Failed to fetch products' }, { status: 500 });
